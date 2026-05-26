@@ -30,26 +30,13 @@ cursor.execute("""
 CREATE TABLE IF NOT EXISTS ventas(
     id_venta INTEGER PRIMARY KEY AUTOINCREMENT,
     id_cliente INTEGER NOT NULL,
-    total REAL DEFAULT 0,
-    fecha_venta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(id_cliente)
-    REFERENCES clientes(id_cliente)
-)
-""")
-
-# DETALLES VENTAS
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS detalle_ventas(
-    id_detalle INTEGER PRIMARY KEY AUTOINCREMENT,
-    id_venta INTEGER NOT NULL,
     id_envase INTEGER NOT NULL,
     cantidad INTEGER NOT NULL,
     precio_unitario REAL NOT NULL,
     subtotal REAL NOT NULL,
-    FOREIGN KEY(id_venta)
-    REFERENCES ventas(id_venta),
-    FOREIGN KEY(id_envase)
-    REFERENCES envases(id_envase)
+    fecha_venta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(id_cliente) REFERENCES clientes(id_cliente),
+    FOREIGN KEY(id_envase) REFERENCES envases(id_envase)
 )
 """)
 
