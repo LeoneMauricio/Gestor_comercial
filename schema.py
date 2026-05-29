@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS clientes(
     nombre TEXT NOT NULL,
     apellido TEXT NOT NULL,
     direccion TEXT NOT NULL,
-    celular TEXT NOT NULL
+    celular TEXT NOT NULL UNIQUE
 )
 """)
 
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS clientes(
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS envases(
     id_envase INTEGER PRIMARY KEY AUTOINCREMENT,
-    envase TEXT NOT NULL,
+    envase TEXT NOT NULL UNIQUE,
     stock INTEGER NOT NULL,
     precio REAL NOT NULL
 )
@@ -48,10 +48,9 @@ CREATE TABLE IF NOT EXISTS prestamos_envases(
     id_envase INTEGER NOT NULL,
     cantidad INTEGER NOT NULL,
     fecha_prestamo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(id_cliente)
-    REFERENCES clientes(id_cliente),
-    FOREIGN KEY(id_envase)
-    REFERENCES envases(id_envase)
+    UNIQUE(id_cliente, id_envase),
+    FOREIGN KEY(id_cliente) REFERENCES clientes(id_cliente),
+    FOREIGN KEY(id_envase) REFERENCES envases(id_envase)
 )
 """)
 

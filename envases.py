@@ -1,3 +1,4 @@
+import sqlite3
 from database import conectar, conectar_row
 from tkinter import messagebox, ttk
 import tkinter as tk
@@ -52,93 +53,15 @@ def ui_agregar_envase():
     ctk.CTkButton(ventana, text="Guardar", command=guardar).pack(pady=10)
     
     ventana.mainloop()
-# MODIFICAR ENVASES
-def modificar_envases(id_envase, campo, nuevo_valor):
-    campos_validos = [
-        "envase",
-        "stock",
-        "precio",
-    ]
-    
-    if campo not in campos_validos:
-        return False
-    
-    conexion = None
-
-    try:
-        conexion = conectar()
-        cursor = conexion.cursor()
-        sql = f"""
-        UPDATE envases
-        SET {campo} = ?
-        WHERE id_envase = ?
-        """
-        cursor.execute(sql, (nuevo_valor, id_envase))
-        conexion.commit()
-        return True
-
-    except Exception as e:
-        print(e)
-        return False
-    finally:
-        if conexion:
-            conexion.close()
-# UI MODIFICAR ENVASE
-def ui_modificar_envase():
-    ventana = ctk.CTk()
-    ventana.title("Modificar Envase")
-    ventana.geometry("600x500")
-    #Entrada id cliente 
-    lbl_id = ctk.CTkLabel(ventana, text="ID del envase:")
-    lbl_id.pack(pady=5)
-    entry_id = ctk.CTkEntry(ventana)
-    entry_id.pack(pady=5)
-    # Menu de campo
-    lbl_opciones = ctk.CTkLabel(ventana, text="¿Qué desea modificar?")
-    lbl_opciones.pack(pady=10)
-    opciones = {
-        "Envase": "envase",
-        "Stock": "stock",
-        "Precio": "precio",
-    }
-
-    campo_var = tk.StringVar(value="envase")
-    menu_campos = ctk.CTkOptionMenu(ventana, variable=campo_var, values=list(opciones.keys()))
-    menu_campos.pack(pady=5)
-
-    lbl_valor = ctk.CTkLabel(ventana, text="Nuevo valor:")
-    lbl_valor.pack(pady=5)
-    entry_valor = ctk.CTkEntry(ventana)
-    entry_valor.pack(pady=5)
-
-    def actualizar():
-        try:
-            id_envase = int(entry_id.get())
-            campo = opciones[menu_campos.get()]
-            nuevo_valor = entry_valor.get()
-
-            resultado = modificar_envases(id_envase, campo, nuevo_valor)
-
-            if resultado:
-                messagebox.showinfo("Éxito", "Envase actualizado correctamente")
-            else:
-                messagebox.showerror("Error", "No se pudo actualizar el envase")
-        except ValueError:
-            messagebox.showerror("Error", "El ID debe ser un número")
-
-    btn_actualizar = ctk.CTkButton(ventana, text="Actualizar", command=actualizar)
-    btn_actualizar.pack(pady=20)
-
-    ventana.mainloop()
 # MOSTRAR ENVASES
 def obtener_envases():
-    conexion = conectar()
+    conexion = conectar_row()
     cursor = conexion.cursor()
     cursor.execute("SELECT * FROM envases")
     datos = cursor.fetchall()
     conexion.close()
-    return datos
-# UI MOSTRAR ENVASES
+    return [tuple(fila) for fila in datos]
+# UI MOSTRAR ENVASES / MODIFICAR
 def ui_mostrar_envases():
     ventana = ctk.CTk()
     ventana.title("Lista de Envases")
@@ -167,9 +90,57 @@ def ui_mostrar_envases():
     tabla.configure(yscroll=scrollbar.set)
     scrollbar.pack(side="right", fill="y")
 
-    ventana.mainloop()
+    def abrir_modificar(): # MODIFICAR TABLA ENVASES
+        seleccion = tabla.selection()
+        if not seleccion:
+            messagebox.showwarning("Aviso", "Selecciona un envase para modificar")
+            return
 
-# AGREGAR PRÉSTAMO
+        item = seleccion[0]
+        datos = tabla.item(item, "values")  # valores de la fila seleccionada
+
+        top = ctk.CTkToplevel(ventana)
+        top.title("Modificar Envase")
+
+        # Campos editables
+        labels = ["Envase", "Stock", "Precio"]
+        entries = []
+
+        for i, campo in enumerate(labels, start=1):
+            ctk.CTkLabel(top, text=campo).pack()
+            entry = ctk.CTkEntry(top)
+            entry.insert(0, datos[i])  # valores desde la fila seleccionada
+            entry.pack(pady=5)
+            entries.append(entry)
+
+        def guardar():
+            nuevo_envase = entries[0].get()
+            nuevo_stock = int(entries[1].get())
+            nueva_precio = float(entries[2].get())
+            id_envase = datos[0]  # ID siempre viene de la primera columna
+
+            conexion = sqlite3.connect("soderia.db")
+            cursor = conexion.cursor()
+            cursor.execute("""
+                UPDATE envases
+                SET envase=?, stock=?, precio=?
+                WHERE id_envase=?
+            """, (nuevo_envase, nuevo_stock, nueva_precio, id_envase))
+            conexion.commit()
+            conexion.close()
+
+            # refrescar tabla
+            tabla.item(item, values=(id_envase, nuevo_envase, nuevo_stock, nueva_precio))
+            top.destroy()
+            messagebox.showinfo("Éxito", "Envase actualizado correctamente")
+
+        ctk.CTkButton(top, text="Guardar cambios", command=guardar).pack(pady=10)
+
+    boton_modificar = ctk.CTkButton(ventana, text="Modificar Envase", command=abrir_modificar)
+    boton_modificar.pack(pady=10)
+
+    ventana.mainloop()
+# AGREGAR PRÉSTAMO ENVASES
 def agregar_prestamo(id_cliente, id_envase, cantidad):
     conexion = None
     try:
@@ -183,16 +154,26 @@ def agregar_prestamo(id_cliente, id_envase, cantidad):
         """, (id_envase,))
         resultado = cursor.fetchone()
 
-        # REGISTRAR PRÉSTAMO
-        cursor.execute("""
-        INSERT INTO prestamos_envases(
-            id_cliente,
-            id_envase,
-            cantidad
-        )
-        VALUES(?, ?, ?)
-        """, (id_cliente, id_envase, cantidad))
+        if resultado is None:
+            return False, "El envase no existe"
 
+        stock_actual = resultado["stock"]
+        # VALIDAR STOCK
+        if cantidad > stock_actual:
+            return False, f"Stock insuficiente. Disponible: {stock_actual}"
+        # REGISTRAR O ACUMULAR PRÉSTAMO
+        try:
+            cursor.execute("""
+            INSERT INTO prestamos_envases(id_cliente, id_envase, cantidad)
+            VALUES(?, ?, ?)
+            """, (id_cliente, id_envase, cantidad))
+        except sqlite3.IntegrityError:
+            # Ya existe el registro, acumular cantidad
+            cursor.execute("""
+            UPDATE prestamos_envases
+            SET cantidad = cantidad + ?
+            WHERE id_cliente = ? AND id_envase = ?
+            """, (cantidad, id_cliente, id_envase))
         # DESCONTAR STOCK
         cursor.execute("""
         UPDATE envases
@@ -201,15 +182,16 @@ def agregar_prestamo(id_cliente, id_envase, cantidad):
         """, (cantidad, id_envase))
 
         conexion.commit()
-        return True
-
+        return True, "Préstamo registrado correctamente"
+    except Exception as e:
+        return False, f"Error: {e}"
     finally:
         if conexion:
             conexion.close()
 # REGISTRAR PRESTAMOS DE ENVASE
 def ui_agregar_prestamos():
     ventana = ctk.CTkToplevel(root)
-    ventana.title("Agregar Prestamos de Envases")
+    ventana.title("Agregar Préstamos de Envases")
     ventana.geometry("600x500")
     
     id_cliente = ctk.CTkEntry(ventana, placeholder_text="ID del cliente")
@@ -222,23 +204,29 @@ def ui_agregar_prestamos():
 
     def guardar():
         try:
-            resultado = agregar_prestamo(int(id_cliente.get()), int(id_envase.get()), int(cantidad.get()))
-            msg = "Prestamo registrado correctamente" if resultado else "Error al agregar envase"
+            resultado, msg = agregar_prestamo(
+                int(id_cliente.get()), 
+                int(id_envase.get()), 
+                int(cantidad.get())
+            )
         except ValueError:
-            msg = "Error: Los ID o la cantidad deben ser numéricos"
+            resultado, msg = False, "Error: Los ID o la cantidad deben ser numéricos"
+
         ctk.CTkLabel(ventana, text=msg).pack(pady=10)
 
     ctk.CTkButton(ventana, text="Guardar", command=guardar).pack(pady=10)
 
     ventana.mainloop()
-# MOSTRAR TABLA PRESTAMOS DE ENVASES
+# TABLA PRESTAMOS DE ENVASES
 def obtener_envases_prestados():
-    conexion = conectar()
+    conexion = conectar_row()
     cursor = conexion.cursor()
     cursor.execute("""
     SELECT p.id_prestamo,
+        p.id_cliente,
         c.nombre AS cliente,
         c.apellido AS apellido,
+        p.id_envase,
         e.envase AS envase,
         p.cantidad,
         p.fecha_prestamo
@@ -248,7 +236,7 @@ def obtener_envases_prestados():
     """)
     datos = cursor.fetchall()
     conexion.close()
-    return datos
+    return [tuple(fila) for fila in datos]
 # UI MOSTRAR ENVASES PRESTADOS
 def ui_mostrar_envases_prestados():
     ventana = ctk.CTk()
@@ -265,17 +253,102 @@ def ui_mostrar_envases_prestados():
         tabla.heading(col, text=col)
         tabla.column(col, width=100)
 
-    envases = obtener_envases_prestados()
-    if not envases:
-        messagebox.showinfo("Aviso", "No hay envases prestados registrados en la base de datos")
-    else:
-        for envase in envases:
-            tabla.insert("", tk.END, values=envase)
+    datos_completos = {}
+
+    def cargar_tabla():
+        for row in tabla.get_children():
+            tabla.delete(row)
+        datos_completos.clear()
+
+        envases = obtener_envases_prestados()
+        if not envases:
+            messagebox.showinfo("Aviso", "No hay envases prestados registrados en la base de datos")
+        else:
+            for envase in envases:
+                # envase = (id_prestamo, id_cliente, nombre, apellido, id_envase, envase, cantidad, fecha)
+                item_id = tabla.insert("", tk.END, values=(
+                    envase[0],  # id_prestamo
+                    envase[2],  # nombre
+                    envase[3],  # apellido
+                    envase[5],  # envase
+                    envase[6],  # cantidad
+                    envase[7]   # fecha
+                ))
+                datos_completos[item_id] = envase
+
+    cargar_tabla()
 
     tabla.pack(fill="both", expand=True)
 
     scrollbar = ttk.Scrollbar(frame_tabla, orient="vertical", command=tabla.yview)
     tabla.configure(yscroll=scrollbar.set)
     scrollbar.pack(side="right", fill="y")
+
+    def abrir_modificar():
+        seleccion = tabla.selection()
+        if not seleccion:
+            messagebox.showwarning("Aviso", "Selecciona un prestamo para modificar")
+            return
+
+        item = seleccion[0]
+        envase = datos_completos[item]
+
+        top = ctk.CTkToplevel(ventana)
+        top.title("Modificar Prestamo de envases")
+
+        labels = ["Id del cliente", "Id del envase", "Cantidad prestada"]
+        valores_iniciales = [envase[1], envase[4], envase[6]]
+        entries = []
+
+        for campo, valor in zip(labels, valores_iniciales):
+            ctk.CTkLabel(top, text=campo).pack()
+            entry = ctk.CTkEntry(top)
+            entry.insert(0, str(valor))
+            entry.pack(pady=5)
+            entries.append(entry)
+
+        def guardar():
+            try:
+                nuevo_id_cliente = int(entries[0].get())
+                nuevo_id_envase = int(entries[1].get())
+                nueva_cantidad = int(entries[2].get())
+            except ValueError:
+                messagebox.showerror("Error", "Los campos deben ser numéricos")
+                return
+
+            id_prestamo = envase[0]
+            cantidad_anterior = envase[6]
+            id_envase_anterior = envase[4]
+
+            conexion = conectar_row() 
+            cursor = conexion.cursor()
+
+            cursor.execute("""
+                UPDATE prestamos_envases
+                SET id_cliente=?, id_envase=?, cantidad=?
+                WHERE id_prestamo=?
+            """, (nuevo_id_cliente, nuevo_id_envase, nueva_cantidad, id_prestamo))
+
+            if id_envase_anterior != nuevo_id_envase:
+                cursor.execute("UPDATE envases SET stock = stock + ? WHERE id_envase=?",
+                            (cantidad_anterior, id_envase_anterior))
+                cursor.execute("UPDATE envases SET stock = stock - ? WHERE id_envase=?",
+                            (nueva_cantidad, nuevo_id_envase))
+            else:
+                diferencia = nueva_cantidad - cantidad_anterior
+                cursor.execute("UPDATE envases SET stock = stock - ? WHERE id_envase=?",
+                            (diferencia, nuevo_id_envase))
+
+            conexion.commit()
+            conexion.close()
+
+            top.destroy()
+            cargar_tabla()
+            messagebox.showinfo("Éxito", "Préstamo y stock actualizados correctamente")
+
+        ctk.CTkButton(top, text="Guardar cambios", command=guardar).pack(pady=10)
+
+    boton_modificar = ctk.CTkButton(ventana, text="Modificar Prestamos", command=abrir_modificar)
+    boton_modificar.pack(pady=10)
 
     ventana.mainloop()
