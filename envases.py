@@ -188,36 +188,79 @@ def agregar_prestamo(id_cliente, id_envase, cantidad):
     finally:
         if conexion:
             conexion.close()
+# OBTENER CLIENTES Y ENVASES PARA LOS DESPLEGABLES
+def obtener_clientes_dict():
+    conexion = conectar()
+    cursor = conexion.cursor()
+    cursor.execute("SELECT id_cliente, nombre, apellido FROM clientes")
+    filas = cursor.fetchall()
+    conexion.close()
+    return {fila[0]: f"{fila[1]} {fila[2]}" for fila in filas}
+
+def obtener_envases_dict():
+    conexion = conectar()
+    cursor = conexion.cursor()
+    cursor.execute("SELECT id_envase, envase FROM envases")
+    filas = cursor.fetchall()
+    conexion.close()
+    return {fila[0]: {"nombre": fila[1]} for fila in filas}
 # REGISTRAR PRESTAMOS DE ENVASE
 def ui_agregar_prestamos():
     ventana = ctk.CTkToplevel(root)
     ventana.title("Agregar Préstamos de Envases")
     ventana.geometry("600x500")
+
+    clientes_dict = obtener_clientes_dict()   
+    envases_dict  = obtener_envases_dict()    
+
+    clientes_inv = {v: k for k, v in clientes_dict.items()}
+    envases_inv  = {v["nombre"]: k for k, v in envases_dict.items()}
+
+    ctk.CTkLabel(ventana, text="Cliente").pack(pady=(15, 0))
+    opciones_clientes = list(clientes_dict.values())
+    combo_cliente = ctk.CTkComboBox(ventana, values=opciones_clientes, state="readonly", width=300)
+    combo_cliente.set("Seleccionar cliente")
+    combo_cliente.pack(pady=5)
+
+    ctk.CTkLabel(ventana, text="Envase").pack(pady=(10, 0))
+    opciones_envases = [v["nombre"] for v in envases_dict.values()]
+    combo_envase = ctk.CTkComboBox(ventana, values=opciones_envases, state="readonly", width=300)
+    combo_envase.set("Seleccionar envase")
+    combo_envase.pack(pady=5)
     
-    id_cliente = ctk.CTkEntry(ventana, placeholder_text="ID del cliente")
-    id_envase = ctk.CTkEntry(ventana, placeholder_text="ID del envase")
-    cantidad = ctk.CTkEntry(ventana, placeholder_text="Cantidad prestada")
+    def al_seleccionar_envase(nombre_envase):
+        id_envase = envases_inv.get(nombre_envase)
 
-    id_cliente.pack(pady=5)
-    id_envase.pack(pady=5)
-    cantidad.pack(pady=5)
+    combo_envase.configure(command=al_seleccionar_envase)
 
+    ctk.CTkLabel(ventana, text="Cantidad").pack(pady=(10, 0))
+    entry_cantidad = ctk.CTkEntry(ventana, placeholder_text="Cantidad de envases prestados", width=300)
+    entry_cantidad.pack(pady=5)
+    
     def guardar():
         try:
-            resultado, msg = agregar_prestamo(
-                int(id_cliente.get()), 
-                int(id_envase.get()), 
-                int(cantidad.get())
+            cliente_seleccionado = combo_cliente.get()
+            envase_seleccionado  = combo_envase.get()
+
+            id_cliente = clientes_inv.get(cliente_seleccionado)
+            id_envase  = envases_inv.get(envase_seleccionado)
+
+            resultado = agregar_prestamo(
+                int(id_cliente), 
+                int(id_envase), 
+                int(entry_cantidad.get())
             )
+            msg = "Préstamo registrado correctamente" if resultado else "Error al registrar préstamo"
         except ValueError:
-            resultado, msg = False, "Error: Los ID o la cantidad deben ser numéricos"
+            msg = "Error: Los campos deben ser numéricos"
+        except Exception as e:
+            msg = f"Error inesperado: {e}"
 
         ctk.CTkLabel(ventana, text=msg).pack(pady=10)
 
     ctk.CTkButton(ventana, text="Guardar", command=guardar).pack(pady=10)
 
-    ventana.mainloop()
-# TABLA PRESTAMOS DE ENVASES
+    ventana.mainloop()# TABLA PRESTAMOS DE ENVASES
 def obtener_envases_prestados():
     conexion = conectar_row()
     cursor = conexion.cursor()
