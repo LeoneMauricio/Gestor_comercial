@@ -48,7 +48,7 @@ def nueva_venta(id_cliente, id_envase, cantidad, precio_unitario, subtotal):
 def ui_nueva_venta():
     ventana = ctk.CTkToplevel(root)
     ventana.title("Nueva Venta")
-    ventana.geometry("400x450")
+    ventana.geometry("500x650")
 
     clientes_dict = obtener_clientes_dict()   
     envases_dict  = obtener_envases_dict()    
@@ -307,5 +307,29 @@ def ui_mostrar_ventas_por_fecha():
 
     btn_buscar = ctk.CTkButton(frame_filtro, text="Buscar", command=buscar)
     btn_buscar.pack(side="left", padx=5)
+    
+    frame_total = ctk.CTkFrame(ventana)
+    frame_total.pack(fill="x", padx=10, pady=10)
+
+    def calcular_total():
+        total_dia = 0.0
+        # Recorremos todas las filas que están actualmente en la tabla
+        for row in tabla.get_children():
+            valores = tabla.item(row)["values"]
+            # El índice 6 corresponde a la columna "Total"
+            try:
+                total_dia += float(valores[6])
+            except (ValueError, TypeError):
+                pass # Ignoramos si por algún motivo el valor no se puede convertir a número
+        
+        # Actualizamos la etiqueta con el total formateado a 2 decimales
+        lbl_total.configure(text=f"Total del día: ${total_dia:.2f}")
+
+    btn_calcular = ctk.CTkButton(frame_total, text="Calcular Total", command=calcular_total)
+    btn_calcular.pack(side="left", padx=10)
+
+    # Etiqueta que mostrará el monto
+    lbl_total = ctk.CTkLabel(frame_total, text="Total del día: $0.00", font=("Arial", 16, "bold"))
+    lbl_total.pack(side="right", padx=10)
 
     ventana.mainloop()
