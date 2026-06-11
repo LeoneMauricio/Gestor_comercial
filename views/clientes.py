@@ -1,4 +1,4 @@
-from database import conectar, conectar_row
+from config.database import conectar, conectar_row
 from tkinter import messagebox, ttk
 import tkinter as tk
 import customtkinter as ctk
@@ -16,22 +16,23 @@ frame = ctk.CTkFrame(root)
 frame.pack(pady=20, padx=20, fill="both", expand=True)
 
 # AGREGAR CLIENETES
-def agregar_cliente(nombre, apellido, direccion, celular):
+def agregar_cliente(nombre, apellido, direccion, coordenadas, celular):
     try:        
         conexion = conectar()
         cursor = conexion.cursor()
         cursor.execute("""
-        INSERT INTO clientes(nombre, apellido, direccion, celular)
-        VALUES(?, ?, ?, ?)
-        """, (nombre, apellido, direccion, celular))
+        INSERT INTO clientes(nombre, apellido, direccion, coordenadas, celular)
+        VALUES(?, ?, ?, ?, ?)
+        """, (nombre, apellido, direccion, coordenadas, celular))
         
         conexion.commit()
         return True
 
-    except Exception as e:
+    except Exception:
         return False
     finally:
         conexion.close()
+
 # UI PARA AGREGAR CLIENTES
 def ui_agregar_cliente():
     ventana = ctk.CTkToplevel(root)
@@ -41,11 +42,13 @@ def ui_agregar_cliente():
     nombre = ctk.CTkEntry(ventana, placeholder_text="Nombre")
     apellido = ctk.CTkEntry(ventana, placeholder_text="Apellido")
     direccion = ctk.CTkEntry(ventana, placeholder_text="Dirección")
+    coordenadas = ctk.CTkEntry(ventana, placeholder_text="Coordenadas google maps")
     celular = ctk.CTkEntry(ventana, placeholder_text="Celular")
 
     nombre.pack(pady=5)
     apellido.pack(pady=5)
     direccion.pack(pady=5)
+    coordenadas.pack(pady=5)
     celular.pack(pady=5)
 
     def guardar():
@@ -53,6 +56,7 @@ def ui_agregar_cliente():
             nombre.get(),
             apellido.get(),
             direccion.get(),
+            coordenadas.get(),
             celular.get()
         )
         msg = "Cliente agregado correctamente" if resultado else "Error al agregar cliente"
@@ -66,7 +70,7 @@ def obtener_clientes():
     conexion = conectar()
     conexion.row_factory = sqlite3.Row
     cursor = conexion.cursor()
-    cursor.execute("SELECT id_cliente, nombre, apellido, direccion, celular FROM clientes")
+    cursor.execute("SELECT id_cliente, nombre, apellido, direccion, coordenadas, celular FROM clientes")
     datos = cursor.fetchall()
     conexion.close()
     return [tuple(fila) for fila in datos]
@@ -79,7 +83,7 @@ def ui_mostrar_clientes():
     frame_tabla = ctk.CTkFrame(ventana)
     frame_tabla.pack(fill="both", expand=True, padx=10, pady=10)
 
-    columnas = ("ID", "Nombre", "Apellido", "Dirección", "Celular")
+    columnas = ("ID", "Nombre", "Apellido", "Dirección","Coordenadas", "Celular")
     tabla = ttk.Treeview(frame_tabla, columns=columnas, show="headings")
 
     for col in columnas:
@@ -111,7 +115,7 @@ def ui_mostrar_clientes():
         top = ctk.CTkToplevel(ventana)
         top.title("Modificar Cliente")
 
-        labels = ["Nombre", "Apellido", "Dirección", "Celular"]
+        labels = ["Nombre", "Apellido", "Dirección","Coordenadas", "Celular"]
         entries = []
 
         for i, campo in enumerate(labels, start=1):
@@ -125,20 +129,21 @@ def ui_mostrar_clientes():
             nuevo_nombre = entries[0].get()
             nuevo_apellido = entries[1].get()
             nueva_direccion = entries[2].get()
-            nuevo_celular = entries[3].get()
+            nueva_coordenada = entries[3].get()
+            nuevo_celular = entries[4].get()
             id_cliente = datos[0]
 
             conexion = sqlite3.connect("soderia.db")
             cursor = conexion.cursor()
             cursor.execute("""
                 UPDATE clientes
-                SET nombre=?, apellido=?, direccion=?, celular=?
+                SET nombre=?, apellido=?, direccion=?, coordenadas=?, celular=?
                 WHERE id_cliente=?
-            """, (nuevo_nombre, nuevo_apellido, nueva_direccion, nuevo_celular, id_cliente))
+            """, (nuevo_nombre, nuevo_apellido, nueva_direccion, nueva_coordenada, nuevo_celular, id_cliente))
             conexion.commit()
             conexion.close()
 
-            tabla.item(item, values=(id_cliente, nuevo_nombre, nuevo_apellido, nueva_direccion, nuevo_celular))
+            tabla.item(item, values=(id_cliente, nuevo_nombre, nuevo_apellido, nueva_direccion, nueva_coordenada, nuevo_celular))
             top.destroy()
             messagebox.showinfo("Éxito", "Cliente actualizado correctamente")
 

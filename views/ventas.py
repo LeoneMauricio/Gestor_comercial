@@ -1,4 +1,4 @@
-from database import conectar, conectar_row
+from config.database import conectar, conectar_row
 from tkinter import messagebox, ttk
 from tkcalendar import DateEntry
 from datetime import datetime
@@ -107,8 +107,6 @@ def ui_nueva_venta():
             pass
 
     entry_cantidad.bind("<KeyRelease>", calcular_subtotal)
-
-    ctk.CTkButton(ventana, text="Calcular Subtotal", command=calcular_subtotal).pack(pady=10)
 
 
     def registrar_venta():

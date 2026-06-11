@@ -1,5 +1,5 @@
 import sqlite3
-from database import conectar, conectar_row
+from config.database import conectar, conectar_row
 from tkinter import messagebox, ttk
 import tkinter as tk
 import customtkinter as ctk
