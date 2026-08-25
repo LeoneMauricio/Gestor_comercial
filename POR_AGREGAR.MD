@@ -6,3 +6,4 @@
 5) Registrar de mes a mes las ventas.
 6) Pestaña extra para dirección coordenadas de google.✅
     a. hacer interactiva (copiar/pegar)
+7) Agregar pestaña fecha en mostrar gastos✅

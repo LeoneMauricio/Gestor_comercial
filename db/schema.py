@@ -59,14 +59,23 @@ CREATE TABLE IF NOT EXISTS prestamos_envases(
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS gastos(
     id_gasto INTEGER PRIMARY KEY AUTOINCREMENT,
-    insumos TEXT,
-    pagos_empleados TEXT,
-    servicios TEXT,
-    otros TEXT,
+    motivo TEXT,
     monto REAL,
     fecha_del_gasto DATETIME DEFAULT (datetime('now', 'localtime'))
 )
 """)
+
+# GANANCIAS VER SI ES NECESARIA
+# cursor.execute("""
+# CREATE TABLE IF NOT EXISTS ganancias(
+#     id_ganancia INTEGER PRIMARY KEY AUTOINCREMENT,
+#     gasto REAL,
+#     venta REAL,
+#     ganancia REAL,
+#     fecha_del_gasto DATETIME DEFAULT (datetime('now', 'localtime'))
+# )
+# """)
+
 
 conexion.commit()
 conexion.close()
