@@ -1,7 +1,5 @@
 import customtkinter as ctk
 
-from PIL import Image
-
 from views.envases import (
     ui_agregar_envase,
     ui_mostrar_envases,
@@ -26,6 +24,9 @@ from views.gastos import (
     ui_mostrar_gastos_por_fecha
 )
 
+from views.ganancias import(
+    ui_ganancias
+)
 # CONFIGURACIÓN DE CUSTOMTKINTER
 
 ctk.set_appearance_mode("System")
@@ -82,7 +83,6 @@ contenido.pack(
     pady=15
 )
 
-
 # TÍTULO DEL MENÚ
 
 titulo = ctk.CTkLabel(
@@ -94,7 +94,6 @@ titulo = ctk.CTkLabel(
 titulo.pack(
     pady=(40, 30)
 )
-
 
 subtitulo = ctk.CTkLabel(
     menu,
@@ -326,12 +325,14 @@ ctk.CTkButton(
 
 # GANANCIAS
 
-ctk.CTkLabel(
+ctk.CTkButton(
     frame_ganancias,
-    text="Módulo de ganancias",
-    font=("Arial", 18)
+    text="Ganancias",
+    command=ui_ganancias,
+    width=300,
+    height=45
 ).pack(
-    pady=20
+    pady=8
 )
 
 # BOTONES DEL MENÚ LATERAL

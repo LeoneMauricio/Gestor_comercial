@@ -1,5 +1,6 @@
 1) Saber cuando compró un cliente por última vez:
-    a. Pestaña que ordene de mayor a menor en función de la última vez que compraron.
+    a. Pestaña que ordene de mayor a menor
+    (order by) en función de la última vez que compraron.
 2) Agregar gastos diarios.✅
 3) Establecer una relación gastos vs ventas.
 4) Estadística de ganancia mensual.

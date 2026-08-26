@@ -65,17 +65,65 @@ CREATE TABLE IF NOT EXISTS gastos(
 )
 """)
 
-# GANANCIAS VER SI ES NECESARIA
-# cursor.execute("""
-# CREATE TABLE IF NOT EXISTS ganancias(
-#     id_ganancia INTEGER PRIMARY KEY AUTOINCREMENT,
-#     gasto REAL,
-#     venta REAL,
-#     ganancia REAL,
-#     fecha_del_gasto DATETIME DEFAULT (datetime('now', 'localtime'))
-# )
-# """)
+# GANANCIAS POR DÍA
+cursor.execute("""
+    CREATE VIEW IF NOT EXISTS ganancias_diarias AS
+    SELECT
+        fecha,
+        COALESCE(total_ventas, 0) AS total_ventas,
+        COALESCE(total_gastos, 0) AS total_gastos,
+        COALESCE(total_ventas, 0) - COALESCE(total_gastos, 0) AS ganancia_neta
+    FROM (
+        SELECT DATE(fecha_venta) AS fecha, SUM(subtotal) AS total_ventas
+        FROM ventas
+        GROUP BY DATE(fecha_venta)
+    ) v
+    LEFT JOIN (
+        SELECT DATE(fecha_del_gasto) AS fecha, SUM(monto) AS total_gastos
+        FROM gastos
+        GROUP BY DATE(fecha_del_gasto)
+    ) g USING(fecha)
+    """)
 
+    # GANANCIAS POR MES
+cursor.execute("""
+    CREATE VIEW IF NOT EXISTS ganancias_mensuales AS
+    SELECT
+        mes,
+        COALESCE(total_ventas, 0) AS total_ventas,
+        COALESCE(total_gastos, 0) AS total_gastos,
+        COALESCE(total_ventas, 0) - COALESCE(total_gastos, 0) AS ganancia_neta
+    FROM (
+        SELECT strftime('%Y-%m', fecha_venta) AS mes, SUM(subtotal) AS total_ventas
+        FROM ventas
+        GROUP BY strftime('%Y-%m', fecha_venta)
+    ) v
+    LEFT JOIN (
+        SELECT strftime('%Y-%m', fecha_del_gasto) AS mes, SUM(monto) AS total_gastos
+        FROM gastos
+        GROUP BY strftime('%Y-%m', fecha_del_gasto)
+    ) g USING(mes)
+    """)
+
+# GANANCIAS POR AÑO
+cursor.execute("""
+    CREATE VIEW IF NOT EXISTS ganancias_anuales AS
+    SELECT
+        anio,
+        COALESCE(total_ventas, 0) AS total_ventas,
+        COALESCE(total_gastos, 0) AS total_gastos,
+        COALESCE(total_ventas, 0) - COALESCE(total_gastos, 0) AS ganancia_neta
+    FROM (
+        SELECT strftime('%Y', fecha_venta) AS anio, SUM(subtotal) AS total_ventas
+        FROM ventas
+        GROUP BY strftime('%Y', fecha_venta)
+    ) v
+    LEFT JOIN (
+        SELECT strftime('%Y', fecha_del_gasto) AS anio, SUM(monto) AS total_gastos
+        FROM gastos
+        GROUP BY strftime('%Y', fecha_del_gasto)
+    ) g USING(anio)
+    """)
 
 conexion.commit()
 conexion.close()

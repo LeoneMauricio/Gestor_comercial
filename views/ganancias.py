@@ -1,115 +1,116 @@
-import sqlite3
+
 from config.database import conectar, conectar_row
 from tkinter import messagebox, ttk
-import tkinter as tk
+from tkinter import ttk
 import customtkinter as ctk
-from tkcalendar import DateEntry
-
 ctk.set_appearance_mode("System")  # "Light", "Dark", "System"
 ctk.set_default_color_theme("blue")  # Puedes cambiar el tema
 
 root = ctk.CTk()
-root.title("Sodería - Gestión")
-root.geometry("600x500")
-# Frame principal
-frame = ctk.CTkFrame(root)
-frame.pack(pady=20, padx=20, fill="both", expand=True)
 
-# UI MOSTRAR GANANCIAS POR FECHA
-def ui_mostrar_ganancias_fecha():
-    ventana = ctk.CTk()
-    ventana.title("Ganancias por Fecha")
-    ventana.geometry("700x500")
+# ==========================================================
+# CONSULTA A LAS VISTAS
+# ==========================================================
 
-    frame_filtro = ctk.CTkFrame(ventana)
-    frame_filtro.pack(pady=10)
+def obtener_ganancias(tipo):
+    """
+    tipo: 'dia', 'mes' o 'anio'
+    Lee de la vista correspondiente (ganancias_diarias / _mensuales / _anuales)
+    """
+    vistas = {
+        "dia":  ("ganancias_diarias", "fecha"),
+        "mes":  ("ganancias_mensuales", "mes"),
+        "anio": ("ganancias_anuales", "anio"),
+    }
+    vista, columna_periodo = vistas[tipo]
 
-    tk.Label(frame_filtro, text="Seleccione una fecha:").pack(side="left", padx=5)
-    calendario = DateEntry(frame_filtro, width=12, background="darkblue",
-                        foreground="white", borderwidth=2, date_pattern="yyyy-mm-dd")
-    calendario.pack(side="left", padx=5)
+    conexion = conectar()
+    cursor = conexion.cursor()
+    cursor.execute(f"""
+        SELECT {columna_periodo}, total_ventas, total_gastos, ganancia_neta
+        FROM {vista}
+        ORDER BY {columna_periodo} DESC
+    """)
+    filas = cursor.fetchall()
+    conexion.close()
+    return filas
 
-    frame_tabla = ctk.CTkFrame(ventana)
-    frame_tabla.pack(fill="both", expand=True, padx=10, pady=10)
-# VER DESDE ACÁ PARA ESTABLECER RELACIÓN
-    columnas = ("Gastos", "Ventas", "Ganancia")
-    tabla = ttk.Treeview(frame_tabla, columns=columnas, show="headings")
 
-    for col in columnas:
-        tabla.heading(col, text=col)
-        tabla.column(col, width=150)
+# ==========================================================
+# UI DE GANANCIAS
+# ==========================================================
 
-    tabla.pack(fill="both", expand=True, side="left")
+def ui_ganancias():
+    ventana = ctk.CTkToplevel(root)
+    ventana.title("Ganancias")
+    ventana.after(100, lambda: ventana.state("zoomed"))
 
-    scrollbar = ttk.Scrollbar(frame_tabla, orient="vertical", command=tabla.yview)
-    tabla.configure(yscroll=scrollbar.set)
-    scrollbar.pack(side="right", fill="y")
+    tabview = ctk.CTkTabview(ventana, width=900, height=600)
+    tabview.pack(fill="both", expand=True, padx=15, pady=15)
 
-    def buscar():
-        fecha = calendario.get_date().strftime("%Y-%m-%d")
-        conexion = None
+    tab_dia = tabview.add("Por día")
+    tab_mes = tabview.add("Por mes")
+    tab_anio = tabview.add("Por año")
 
-        try:
-            conexion = conectar() 
-            cursor = conexion.cursor()
-            cursor.execute("""
-                SELECT p.id_venta,
-                    c.nombre AS cliente,
-                    c.apellido AS apellido,
-                    e.envase AS envase,
-                    p.cantidad,
-                    p.precio_unitario,
-                    p.subtotal,
-                    p.fecha_venta
-                FROM ventas p
-                INNER JOIN clientes c ON p.id_cliente = c.id_cliente
-                INNER JOIN envases e ON p.id_envase = e.id_envase
-                WHERE DATE(p.fecha_venta) = ?
-            """, (fecha,))
+    tablas = {}
 
-            ventas = cursor.fetchall()
+    def crear_tabla(tab, encabezado_periodo):
+        columnas = ("periodo", "ventas", "gastos", "neta")
+        tabla = ttk.Treeview(tab, columns=columnas, show="headings", height=20)
 
-            for row in tabla.get_children():
-                tabla.delete(row)
+        tabla.heading("periodo", text=encabezado_periodo)
+        tabla.heading("ventas", text="Total Ventas")
+        tabla.heading("gastos", text="Total Gastos")
+        tabla.heading("neta", text="Ganancia Neta")
 
-            if not ventas:
-                messagebox.showinfo("Ventas", f"No hay ventas registradas en {fecha}.")
-                return
+        for col in columnas:
+            tabla.column(col, width=180, anchor="center")
 
-            for venta in ventas:
-                tabla.insert("", tk.END, values=venta)
+        tabla.pack(fill="both", expand=True, padx=10, pady=10)
 
-        except Exception as e:
-            messagebox.showerror("Error", f"Ocurrió un error: {e}")
-        finally:
-            if conexion:
-                conexion.close()
+        # fila roja si la ganancia neta es negativa
+        tabla.tag_configure("negativa", foreground="#e04b4b")
+        tabla.tag_configure("positiva", foreground="#3bb273")
 
-    btn_buscar = ctk.CTkButton(frame_filtro, text="Buscar", command=buscar)
-    btn_buscar.pack(side="left", padx=5)
-    
-    frame_total = ctk.CTkFrame(ventana)
-    frame_total.pack(fill="x", padx=10, pady=10)
+        return tabla
 
-    def calcular_total():
-        total_dia = 0.0
-        # Recorremos todas las filas que están actualmente en la tabla
-        for row in tabla.get_children():
-            valores = tabla.item(row)["values"]
-            # El índice 6 corresponde a la columna "Total"
-            try:
-                total_dia += float(valores[6])
-            except (ValueError, TypeError):
-                pass # Ignoramos si por algún motivo el valor no se puede convertir a número
-        
-        # Actualizamos la etiqueta con el total formateado a 2 decimales
-        lbl_total.configure(text=f"Total del día: ${total_dia:.2f}")
+    tablas["dia"] = crear_tabla(tab_dia, "Fecha")
+    tablas["mes"] = crear_tabla(tab_mes, "Mes")
+    tablas["anio"] = crear_tabla(tab_anio, "Año")
 
-    btn_calcular = ctk.CTkButton(frame_total, text="Calcular Total", command=calcular_total)
-    btn_calcular.pack(side="left", padx=10)
+    label_resumen = {}
+    for tipo, tab in (("dia", tab_dia), ("mes", tab_mes), ("anio", tab_anio)):
+        label_resumen[tipo] = ctk.CTkLabel(
+            tab, text="", font=ctk.CTkFont(size=15, weight="bold")
+        )
+        label_resumen[tipo].pack(pady=(0, 10))
 
-    # Etiqueta que mostrará el monto
-    lbl_total = ctk.CTkLabel(frame_total, text="Total del día: $0.00", font=("Arial", 16, "bold"))
-    lbl_total.pack(side="right", padx=10)
+    def cargar_datos(tipo):
+        tabla = tablas[tipo]
+        tabla.delete(*tabla.get_children())
+
+        filas = obtener_ganancias(tipo)
+        total_neta_acumulada = 0
+
+        for periodo, ventas, gastos, neta in filas:
+            tag = "negativa" if neta < 0 else "positiva"
+            tabla.insert(
+                "", "end",
+                values=(periodo, f"${ventas:,.2f}", f"${gastos:,.2f}", f"${neta:,.2f}"),
+                tags=(tag,)
+            )
+            total_neta_acumulada += neta
+
+        label_resumen[tipo].configure(
+            text=f"Ganancia neta acumulada (todo el historial): ${total_neta_acumulada:,.2f}"
+        )
+
+    def refrescar_todo():
+        for tipo in ("dia", "mes", "anio"):
+            cargar_datos(tipo)
+
+    refrescar_todo()
+
+    ctk.CTkButton(ventana, text="Actualizar", command=refrescar_todo).pack(pady=10)
 
     ventana.mainloop()

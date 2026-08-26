@@ -2,20 +2,25 @@ from config.database import conectar, conectar_row
 from tkinter import messagebox, ttk
 from tkcalendar import DateEntry
 from datetime import datetime
+import os
+import datetime
+from pathlib import Path
 import tkinter as tk
 import customtkinter as ctk
 
 ctk.set_appearance_mode("System")  # "Light", "Dark", "System"
-ctk.set_default_color_theme("blue")  # Puedes cambiar el tema
+ctk.set_default_color_theme("dark-blue")  # Puedes cambiar el tema
 
 root = ctk.CTk()
-root.title("Sodería - Gestión")
-root.geometry("600x500")
+
 # Frame principal
 frame = ctk.CTkFrame(root)
 frame.pack(pady=20, padx=20, fill="both", expand=True)
 
-# OBTENER CLIENTES Y ENVASES PARA LOS DESPLEGABLES
+# ==========================================================
+# CONSULTAS A LA BASE DE DATOS
+# ==========================================================
+
 def obtener_clientes_dict():
     conexion = conectar()
     cursor = conexion.cursor()
@@ -24,6 +29,7 @@ def obtener_clientes_dict():
     conexion.close()
     return {fila[0]: f"{fila[1]} {fila[2]}" for fila in filas}
 
+
 def obtener_envases_dict():
     conexion = conectar()
     cursor = conexion.cursor()
@@ -31,7 +37,8 @@ def obtener_envases_dict():
     filas = cursor.fetchall()
     conexion.close()
     return {fila[0]: {"nombre": fila[1], "precio": fila[2]} for fila in filas}
-# REGISTRAR VENTA
+
+
 def nueva_venta(id_cliente, id_envase, cantidad, precio_unitario, subtotal):
     try:
         conexion = conectar()
@@ -44,32 +51,99 @@ def nueva_venta(id_cliente, id_envase, cantidad, precio_unitario, subtotal):
         return True
     finally:
         conexion.close()
-# UI NUEVA VENTA
-def ui_nueva_venta():
-    ventana = ctk.CTkToplevel(root)
-    ventana.title("Nueva Venta")
-    ventana.geometry("500x650")
 
-    clientes_dict = obtener_clientes_dict()   
-    envases_dict  = obtener_envases_dict()    
+
+# ==========================================================
+# GENERACIÓN E IMPRESIÓN DE RECIBO
+# ==========================================================
+
+def generar_recibo(carrito):
+    """Genera un archivo .txt con el detalle de la venta y devuelve su ruta."""
+    carpeta_recibos = Path(__file__).resolve().parent / "recibos"
+    carpeta_recibos.mkdir(exist_ok=True)
+
+    ahora = datetime.datetime.now()
+    nombre_archivo = f"recibo_{ahora.strftime('%Y%m%d_%H%M%S')}.txt"
+    ruta = carpeta_recibos / nombre_archivo
+
+    total_general = sum(item["subtotal"] for item in carrito)
+    nombre_cliente = carrito[0]["nombre_cliente"]
+
+    lineas = []
+    lineas.append("=" * 40)
+    lineas.append("           SODERÍA - RECIBO")
+    lineas.append("=" * 40)
+    lineas.append(f"Fecha: {ahora.strftime('%d/%m/%Y %H:%M')}")
+    lineas.append(f"Cliente: {nombre_cliente}")
+    lineas.append("-" * 40)
+    lineas.append(f"{'Envase':<15}{'Cant.':>6}{'P.Unit.':>9}{'Subt.':>10}")
+    lineas.append("-" * 40)
+    for item in carrito:
+        lineas.append(
+            f"{item['nombre_envase']:<15}"
+            f"{item['cantidad']:>6}"
+            f"{item['precio_unitario']:>9.2f}"
+            f"{item['subtotal']:>10.2f}"
+        )
+    lineas.append("-" * 40)
+    lineas.append(f"{'TOTAL:':<30}{total_general:>10.2f}")
+    lineas.append("=" * 40)
+    lineas.append("¡Gracias por su compra!")
+
+    ruta.write_text("\n".join(lineas), encoding="utf-8")
+    return ruta
+
+
+def imprimir_recibo(ruta):
+    """Envía el archivo de recibo a imprimir usando el sistema operativo."""
+    try:
+        if os.name == "nt":  # Windows
+            os.startfile(str(ruta), "print")
+        else:  # Linux / Mac (requiere 'lp' instalado)
+            os.system(f"lp '{ruta}'")
+    except Exception as e:
+        messagebox.showwarning(
+            "Aviso",
+            f"El recibo se generó en:\n{ruta}\n\n"
+            f"Pero no se pudo enviar a imprimir automáticamente.\nError: {e}"
+        )
+
+
+# ==========================================================
+# UI NUEVA VENTA (CON CARRITO)
+# ==========================================================
+
+def ui_nueva_venta():
+    venta_fr = ctk.CTkToplevel(root)
+    venta_fr.title("Nueva Venta")
+    venta_fr.after(100, lambda: venta_fr.state("zoomed"))
+
+    carrito = []  # lista de productos de esta venta, se reinicia cada vez que se abre la ventana
+
+    clientes_dict = obtener_clientes_dict()
+    envases_dict = obtener_envases_dict()
 
     clientes_inv = {v: k for k, v in clientes_dict.items()}
-    envases_inv  = {v["nombre"]: k for k, v in envases_dict.items()}
+    envases_inv = {v["nombre"]: k for k, v in envases_dict.items()}
 
-    ctk.CTkLabel(ventana, text="Cliente").pack(pady=(15, 0))
+    # ---------------- FRAME IZQUIERDO: FORMULARIO ----------------
+    frame_form = ctk.CTkFrame(venta_fr)
+    frame_form.pack(side="left", fill="y", padx=15, pady=15)
+
+    ctk.CTkLabel(frame_form, text="Cliente").pack(pady=(15, 0))
     opciones_clientes = list(clientes_dict.values())
-    combo_cliente = ctk.CTkComboBox(ventana, values=opciones_clientes, state="readonly", width=300)
+    combo_cliente = ctk.CTkComboBox(frame_form, values=opciones_clientes, state="readonly", width=300)
     combo_cliente.set("Seleccionar cliente")
     combo_cliente.pack(pady=5)
 
-    ctk.CTkLabel(ventana, text="Envase").pack(pady=(10, 0))
+    ctk.CTkLabel(frame_form, text="Envase").pack(pady=(10, 0))
     opciones_envases = [v["nombre"] for v in envases_dict.values()]
-    combo_envase = ctk.CTkComboBox(ventana, values=opciones_envases, state="readonly", width=300)
+    combo_envase = ctk.CTkComboBox(frame_form, values=opciones_envases, state="readonly", width=300)
     combo_envase.set("Seleccionar envase")
     combo_envase.pack(pady=5)
 
-    ctk.CTkLabel(ventana, text="Precio unitario").pack(pady=(10, 0))
-    entry_precio = ctk.CTkEntry(ventana, placeholder_text="Precio unitario", width=300)
+    ctk.CTkLabel(frame_form, text="Precio unitario").pack(pady=(10, 0))
+    entry_precio = ctk.CTkEntry(frame_form, placeholder_text="Precio unitario", width=300)
     entry_precio.configure(state="disabled")
     entry_precio.pack(pady=5)
 
@@ -85,20 +159,20 @@ def ui_nueva_venta():
 
     combo_envase.configure(command=al_seleccionar_envase)
 
-    ctk.CTkLabel(ventana, text="Cantidad").pack(pady=(10, 0))
-    entry_cantidad = ctk.CTkEntry(ventana, placeholder_text="Cantidad de envases", width=300)
+    ctk.CTkLabel(frame_form, text="Cantidad").pack(pady=(10, 0))
+    entry_cantidad = ctk.CTkEntry(frame_form, placeholder_text="Cantidad de envases", width=300)
     entry_cantidad.pack(pady=5)
 
-    ctk.CTkLabel(ventana, text="Subtotal").pack(pady=(10, 0))
-    entry_subtotal = ctk.CTkEntry(ventana, placeholder_text="Subtotal", width=300)
+    ctk.CTkLabel(frame_form, text="Subtotal").pack(pady=(10, 0))
+    entry_subtotal = ctk.CTkEntry(frame_form, placeholder_text="Subtotal", width=300)
     entry_subtotal.configure(state="disabled")
     entry_subtotal.pack(pady=5)
 
     def calcular_subtotal(*args):
         try:
-            cant   = float(entry_cantidad.get())
+            cant = float(entry_cantidad.get())
             precio = float(entry_precio.get())
-            total  = cant * precio
+            total = cant * precio
             entry_subtotal.configure(state="normal")
             entry_subtotal.delete(0, "end")
             entry_subtotal.insert(0, f"{total:.2f}")
@@ -108,33 +182,148 @@ def ui_nueva_venta():
 
     entry_cantidad.bind("<KeyRelease>", calcular_subtotal)
 
+    # ---------------- FRAME DERECHO: CARRITO ----------------
+    frame_carrito = ctk.CTkFrame(venta_fr)
+    frame_carrito.pack(side="right", fill="both", expand=True, padx=15, pady=15)
 
-    def registrar_venta():
+    ctk.CTkLabel(
+        frame_carrito, text="Carrito de venta",
+        font=ctk.CTkFont(size=16, weight="bold")
+    ).pack(pady=(10, 5))
+
+    columnas = ("cliente", "envase", "cantidad", "precio", "subtotal")
+    tabla_carrito = ttk.Treeview(frame_carrito, columns=columnas, show="headings", height=15)
+    for col, texto, ancho in [
+        ("cliente", "Cliente", 150),
+        ("envase", "Envase", 120),
+        ("cantidad", "Cant.", 60),
+        ("precio", "Precio U.", 80),
+        ("subtotal", "Subtotal", 80),
+    ]:
+        tabla_carrito.heading(col, text=texto)
+        tabla_carrito.column(col, width=ancho, anchor="center")
+    tabla_carrito.pack(fill="both", expand=True, padx=10, pady=5)
+
+    label_total = ctk.CTkLabel(
+        frame_carrito, text="TOTAL: $0.00",
+        font=ctk.CTkFont(size=18, weight="bold")
+    )
+    label_total.pack(pady=10)
+
+    def refrescar_tabla():
+        tabla_carrito.delete(*tabla_carrito.get_children())
+        total_general = 0
+        for item in carrito:
+            tabla_carrito.insert("", "end", values=(
+                item["nombre_cliente"],
+                item["nombre_envase"],
+                item["cantidad"],
+                f"{item['precio_unitario']:.2f}",
+                f"{item['subtotal']:.2f}",
+            ))
+            total_general += item["subtotal"]
+        label_total.configure(text=f"TOTAL: ${total_general:.2f}")
+
+    def agregar_al_carrito():
         nombre_cliente = combo_cliente.get()
-        nombre_envase  = combo_envase.get()
+        nombre_envase = combo_envase.get()
 
-        if nombre_cliente == "Seleccionar cliente" or nombre_envase == "Seleccionar envase":
-            messagebox.showwarning("Atención", "Seleccione un cliente y un envase.")
+        if nombre_cliente == "Seleccionar cliente":
+            messagebox.showwarning("Atención", "Seleccione un cliente.")
             return
-        if not entry_subtotal.get():
-            messagebox.showwarning("Atención", "Primero calcule el subtotal.")
+        if nombre_envase == "Seleccionar envase":
+            messagebox.showwarning("Atención", "Seleccione un envase.")
+            return
+        if not entry_cantidad.get() or not entry_subtotal.get():
+            messagebox.showwarning("Atención", "Complete la cantidad.")
             return
 
         try:
-            id_cliente     = clientes_inv[nombre_cliente]
-            id_envase      = envases_inv[nombre_envase]
-            cantidad       = int(entry_cantidad.get())
+            id_cliente = clientes_inv[nombre_cliente]
+            id_envase = envases_inv[nombre_envase]
+            cantidad = int(entry_cantidad.get())
             precio_unitario = float(entry_precio.get())
-            subtotal       = float(entry_subtotal.get())
-
-            nueva_venta(id_cliente, id_envase, cantidad, precio_unitario, subtotal)
-            messagebox.showinfo("Éxito", f"Venta registrada. Total: ${subtotal:.2f}")
-            ventana.destroy()
+            subtotal = float(entry_subtotal.get())
         except ValueError:
             messagebox.showerror("Error", "La cantidad debe ser un número entero.")
+            return
 
-    ctk.CTkButton(ventana, text="Registrar Venta", command=registrar_venta).pack(pady=10)
-    ventana.mainloop()
+        if cantidad <= 0:
+            messagebox.showwarning("Atención", "La cantidad debe ser mayor a 0.")
+            return
+
+        carrito.append({
+            "id_cliente": id_cliente,
+            "nombre_cliente": nombre_cliente,
+            "id_envase": id_envase,
+            "nombre_envase": nombre_envase,
+            "cantidad": cantidad,
+            "precio_unitario": precio_unitario,
+            "subtotal": subtotal,
+        })
+
+        refrescar_tabla()
+
+        # limpiar campos de envase/cantidad para cargar el siguiente producto
+        combo_envase.set("Seleccionar envase")
+        entry_precio.configure(state="normal")
+        entry_precio.delete(0, "end")
+        entry_precio.configure(state="disabled")
+        entry_cantidad.delete(0, "end")
+        entry_subtotal.configure(state="normal")
+        entry_subtotal.delete(0, "end")
+        entry_subtotal.configure(state="disabled")
+
+    def quitar_seleccionado():
+        seleccion = tabla_carrito.selection()
+        if not seleccion:
+            messagebox.showwarning("Atención", "Seleccione un producto del carrito para quitar.")
+            return
+        indice = tabla_carrito.index(seleccion[0])
+        carrito.pop(indice)
+        refrescar_tabla()
+
+    ctk.CTkButton(frame_form, text="Agregar al carrito", command=agregar_al_carrito).pack(pady=15)
+
+    frame_botones_carrito = ctk.CTkFrame(frame_carrito, fg_color="transparent")
+    frame_botones_carrito.pack(pady=5)
+
+    ctk.CTkButton(
+        frame_botones_carrito, text="Quitar seleccionado",
+        fg_color="#a33", hover_color="#822", command=quitar_seleccionado
+    ).pack(side="left", padx=5)
+
+    # ---------------- FINALIZAR VENTA ----------------
+    def finalizar_venta():
+        if not carrito:
+            messagebox.showwarning("Atención", "El carrito está vacío.")
+            return
+
+        try:
+            for item in carrito:
+                nueva_venta(
+                    item["id_cliente"],
+                    item["id_envase"],
+                    item["cantidad"],
+                    item["precio_unitario"],
+                    item["subtotal"],
+                )
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo registrar la venta: {e}")
+            return
+
+        ruta_recibo = generar_recibo(carrito)
+        imprimir_recibo(ruta_recibo)
+
+        messagebox.showinfo("Éxito", "Venta registrada y recibo generado.")
+        venta_fr.destroy()
+
+    ctk.CTkButton(
+        frame_botones_carrito, text="Finalizar venta e imprimir recibo",
+        fg_color="#2a7", hover_color="#196", command=finalizar_venta
+    ).pack(side="left", padx=5)
+
+    venta_fr.mainloop()
 # MOSTRAR TABLA VENTAS
 def mostrar_ventas():
     conexion = conectar_row()

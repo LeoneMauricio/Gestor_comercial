@@ -5,11 +5,9 @@ import customtkinter as ctk
 import sqlite3
 
 ctk.set_appearance_mode("System")  # "Light", "Dark", "System"
-ctk.set_default_color_theme("blue")  # Puedes cambiar el tema
+ctk.set_default_color_theme("dark-blue")  # Puedes cambiar el tema
 
 root = ctk.CTk()
-root.title("Sodería - Gestión")
-root.geometry("600x500")
 
 # Frame principal
 frame = ctk.CTkFrame(root)
@@ -35,15 +33,16 @@ def agregar_cliente(nombre, apellido, direccion, coordenadas, celular):
 
 # UI PARA AGREGAR CLIENTES
 def ui_agregar_cliente():
-    ventana = ctk.CTkToplevel(root)
-    ventana.title("Agregar Cliente")
-    ventana.geometry("500x400")
+    clientes_fr = ctk.CTkToplevel(root)
+    clientes_fr.title("Agregar Cliente")
+    clientes_fr.after(100, lambda: clientes_fr.state("zoomed"))
+
     # Campos
-    nombre = ctk.CTkEntry(ventana, placeholder_text="Nombre")
-    apellido = ctk.CTkEntry(ventana, placeholder_text="Apellido")
-    direccion = ctk.CTkEntry(ventana, placeholder_text="Dirección")
-    coordenadas = ctk.CTkEntry(ventana, placeholder_text="Coordenadas google maps")
-    celular = ctk.CTkEntry(ventana, placeholder_text="Celular")
+    nombre = ctk.CTkEntry(clientes_fr, placeholder_text="Nombre")
+    apellido = ctk.CTkEntry(clientes_fr, placeholder_text="Apellido")
+    direccion = ctk.CTkEntry(clientes_fr, placeholder_text="Dirección")
+    coordenadas = ctk.CTkEntry(clientes_fr, placeholder_text="Coordenadas google maps")
+    celular = ctk.CTkEntry(clientes_fr, placeholder_text="Celular")
 
     nombre.pack(pady=5)
     apellido.pack(pady=5)
@@ -60,11 +59,11 @@ def ui_agregar_cliente():
             celular.get()
         )
         msg = "Cliente agregado correctamente" if resultado else "Error al agregar cliente"
-        ctk.CTkLabel(ventana, text=msg).pack(pady=10)
+        ctk.CTkLabel(clientes_fr, text=msg).pack(pady=10)
 
-    ctk.CTkButton(ventana, text="Guardar", command=guardar).pack(pady=10)
+    ctk.CTkButton(clientes_fr, text="Guardar", command=guardar).pack(pady=10)
 
-    ventana.mainloop()
+    clientes_fr.mainloop()
 # MOSTRAR CLIENTES
 def obtener_clientes():
     conexion = conectar()
@@ -76,11 +75,11 @@ def obtener_clientes():
     return [tuple(fila) for fila in datos]
 # UI PARA MOSTRAR CLIENTES / MODIFICAR EN TABLA
 def ui_mostrar_clientes():
-    ventana = ctk.CTk()
-    ventana.title("Lista de Clientes")
-    ventana.geometry("600x400")
+    clientes_fr= ctk.CTk()
+    clientes_fr.title("Lista de Clientes")
+    clientes_fr.after(100, lambda: clientes_fr.state("zoomed"))
 
-    frame_tabla = ctk.CTkFrame(ventana)
+    frame_tabla = ctk.CTkFrame(clientes_fr)
     frame_tabla.pack(fill="both", expand=True, padx=10, pady=10)
 
     columnas = ("ID", "Nombre", "Apellido", "Dirección","Coordenadas", "Celular")
@@ -112,7 +111,7 @@ def ui_mostrar_clientes():
         item = seleccion[0]
         datos = tabla.item(item, "values") 
 
-        top = ctk.CTkToplevel(ventana)
+        top = ctk.CTkToplevel(clientes_fr)
         top.title("Modificar Cliente")
 
         labels = ["Nombre", "Apellido", "Dirección","Coordenadas", "Celular"]
@@ -149,7 +148,7 @@ def ui_mostrar_clientes():
 
         ctk.CTkButton(top, text="Guardar cambios", command=guardar).pack(pady=10)
 
-    boton_modificar = ctk.CTkButton(ventana, text="Modificar Cliente", command=abrir_modificar)
+    boton_modificar = ctk.CTkButton(clientes_fr, text="Modificar Cliente", command=abrir_modificar)
     boton_modificar.pack(pady=10)
 
-    ventana.mainloop()
+    clientes_fr.mainloop()
