@@ -5,11 +5,10 @@ import tkinter as tk
 import customtkinter as ctk
 
 ctk.set_appearance_mode("System")  # "Light", "Dark", "System"
-ctk.set_default_color_theme("blue")  # Puedes cambiar el tema
+ctk.set_default_color_theme("dark-blue")  # Puedes cambiar el tema
 
 root = ctk.CTk()
-root.title("Sodería - Gestión")
-root.geometry("600x500")
+
 # Frame principal
 frame = ctk.CTkFrame(root)
 frame.pack(pady=20, padx=20, fill="both", expand=True)
@@ -30,13 +29,13 @@ def agregar_envase(envase, stock, precio):
         conexion.close()
 # UI AGREGAR ENVASES
 def ui_agregar_envase():
-    ventana = ctk.CTkToplevel(root)
-    ventana.title("Agregar Envase")
-    ventana.geometry("600x500")
+    envase_fr = ctk.CTkToplevel(root)
+    envase_fr.title("Agregar Envase")
+    envase_fr.after(100, lambda: envase_fr.state("zoomed"))
 
-    envase = ctk.CTkEntry(ventana, placeholder_text="Nombre del envase")
-    stock = ctk.CTkEntry(ventana, placeholder_text="Stock")
-    precio = ctk.CTkEntry(ventana, placeholder_text="Precio")
+    envase = ctk.CTkEntry(envase_fr, placeholder_text="Nombre del envase")
+    stock = ctk.CTkEntry(envase_fr, placeholder_text="Stock")
+    precio = ctk.CTkEntry(envase_fr, placeholder_text="Precio")
 
     envase.pack(pady=5)
     stock.pack(pady=5)
@@ -48,11 +47,11 @@ def ui_agregar_envase():
             msg = "Envase agregado correctamente" if resultado else "Error al agregar envase"
         except ValueError:
             msg = "Error: Stock y precio deben ser numéricos"
-        ctk.CTkLabel(ventana, text=msg).pack(pady=10)
+        ctk.CTkLabel(envase_fr, text=msg).pack(pady=10)
 
-    ctk.CTkButton(ventana, text="Guardar", command=guardar).pack(pady=10)
+    ctk.CTkButton(envase_fr, text="Guardar", command=guardar).pack(pady=10)
     
-    ventana.mainloop()
+    envase_fr.mainloop()
 # MOSTRAR ENVASES
 def obtener_envases():
     conexion = conectar_row()
@@ -63,11 +62,11 @@ def obtener_envases():
     return [tuple(fila) for fila in datos]
 # UI MOSTRAR ENVASES / MODIFICAR
 def ui_mostrar_envases():
-    ventana = ctk.CTk()
-    ventana.title("Lista de Envases")
-    ventana.geometry("600x400")
+    most_envase_fr = ctk.CTk()
+    most_envase_fr.title("Lista de Envases")
+    most_envase_fr.after(100, lambda: most_envase_fr.state("zoomed"))
 
-    frame_tabla = ctk.CTkFrame(ventana)
+    frame_tabla = ctk.CTkFrame(most_envase_fr)
     frame_tabla.pack(fill="both", expand=True, padx=10, pady=10)
 
     columnas = ("ID", "Envase", "Stock", "Precio")
@@ -99,7 +98,7 @@ def ui_mostrar_envases():
         item = seleccion[0]
         datos = tabla.item(item, "values")  # valores de la fila seleccionada
 
-        top = ctk.CTkToplevel(ventana)
+        top = ctk.CTkToplevel(most_envase_fr)
         top.title("Modificar Envase")
 
         # Campos editables
@@ -136,10 +135,10 @@ def ui_mostrar_envases():
 
         ctk.CTkButton(top, text="Guardar cambios", command=guardar).pack(pady=10)
 
-    boton_modificar = ctk.CTkButton(ventana, text="Modificar Envase", command=abrir_modificar)
+    boton_modificar = ctk.CTkButton(most_envase_fr, text="Modificar Envase", command=abrir_modificar)
     boton_modificar.pack(pady=10)
 
-    ventana.mainloop()
+    most_envase_fr.mainloop()
 # AGREGAR PRÉSTAMO ENVASES
 def agregar_prestamo(id_cliente, id_envase, cantidad):
     conexion = None
@@ -206,9 +205,9 @@ def obtener_envases_dict():
     return {fila[0]: {"nombre": fila[1]} for fila in filas}
 # REGISTRAR PRESTAMOS DE ENVASE
 def ui_agregar_prestamos():
-    ventana = ctk.CTkToplevel(root)
-    ventana.title("Agregar Préstamos de Envases")
-    ventana.geometry("600x500")
+    prestamos_fr = ctk.CTkToplevel(root)
+    prestamos_fr.title("Agregar Préstamos de Envases")
+    prestamos_fr.after(100, lambda: prestamos_fr.state("zoomed"))
 
     clientes_dict = obtener_clientes_dict()   
     envases_dict  = obtener_envases_dict()    
@@ -216,15 +215,15 @@ def ui_agregar_prestamos():
     clientes_inv = {v: k for k, v in clientes_dict.items()}
     envases_inv  = {v["nombre"]: k for k, v in envases_dict.items()}
 
-    ctk.CTkLabel(ventana, text="Cliente").pack(pady=(15, 0))
+    ctk.CTkLabel(prestamos_fr, text="Cliente").pack(pady=(15, 0))
     opciones_clientes = list(clientes_dict.values())
-    combo_cliente = ctk.CTkComboBox(ventana, values=opciones_clientes, state="readonly", width=300)
+    combo_cliente = ctk.CTkComboBox(prestamos_fr, values=opciones_clientes, state="readonly", width=300)
     combo_cliente.set("Seleccionar cliente")
     combo_cliente.pack(pady=5)
 
-    ctk.CTkLabel(ventana, text="Envase").pack(pady=(10, 0))
+    ctk.CTkLabel(prestamos_fr, text="Envase").pack(pady=(10, 0))
     opciones_envases = [v["nombre"] for v in envases_dict.values()]
-    combo_envase = ctk.CTkComboBox(ventana, values=opciones_envases, state="readonly", width=300)
+    combo_envase = ctk.CTkComboBox(prestamos_fr, values=opciones_envases, state="readonly", width=300)
     combo_envase.set("Seleccionar envase")
     combo_envase.pack(pady=5)
     
@@ -233,8 +232,8 @@ def ui_agregar_prestamos():
 
     combo_envase.configure(command=al_seleccionar_envase)
 
-    ctk.CTkLabel(ventana, text="Cantidad").pack(pady=(10, 0))
-    entry_cantidad = ctk.CTkEntry(ventana, placeholder_text="Cantidad de envases prestados", width=300)
+    ctk.CTkLabel(prestamos_fr, text="Cantidad").pack(pady=(10, 0))
+    entry_cantidad = ctk.CTkEntry(prestamos_fr, placeholder_text="Cantidad de envases prestados", width=300)
     entry_cantidad.pack(pady=5)
     
     def guardar():
@@ -256,11 +255,12 @@ def ui_agregar_prestamos():
         except Exception as e:
             msg = f"Error inesperado: {e}"
 
-        ctk.CTkLabel(ventana, text=msg).pack(pady=10)
+        ctk.CTkLabel(prestamos_fr, text=msg).pack(pady=10)
 
-    ctk.CTkButton(ventana, text="Guardar", command=guardar).pack(pady=10)
+    ctk.CTkButton(prestamos_fr, text="Guardar", command=guardar).pack(pady=10)
 
-    ventana.mainloop()# TABLA PRESTAMOS DE ENVASES
+    prestamos_fr.mainloop()
+# TABLA PRESTAMOS DE ENVASES
 def obtener_envases_prestados():
     conexion = conectar_row()
     cursor = conexion.cursor()
@@ -282,11 +282,11 @@ def obtener_envases_prestados():
     return [tuple(fila) for fila in datos]
 # UI MOSTRAR ENVASES PRESTADOS
 def ui_mostrar_envases_prestados():
-    ventana = ctk.CTk()
-    ventana.title("Lista de Envases Prestados")
-    ventana.geometry("600x400")
+    most_prestamos_fr = ctk.CTk()
+    most_prestamos_fr.title("Lista de Envases Prestados")
+    most_prestamos_fr.after(100, lambda: most_prestamos_fr.state("zoomed"))
 
-    frame_tabla = ctk.CTkFrame(ventana)
+    frame_tabla = ctk.CTkFrame(most_prestamos_fr)
     frame_tabla.pack(fill="both", expand=True, padx=10, pady=10)
 
     columnas = ("ID", "Nombre", "Apellido", "Envase", "Cantidad", "Fecha de Prestamo")
@@ -336,7 +336,7 @@ def ui_mostrar_envases_prestados():
         item = seleccion[0]
         envase = datos_completos[item]
 
-        top = ctk.CTkToplevel(ventana)
+        top = ctk.CTkToplevel(most_prestamos_fr)
         top.title("Modificar Prestamo de envases")
 
         labels = ["Id del cliente", "Id del envase", "Cantidad prestada"]
@@ -391,7 +391,7 @@ def ui_mostrar_envases_prestados():
 
         ctk.CTkButton(top, text="Guardar cambios", command=guardar).pack(pady=10)
 
-    boton_modificar = ctk.CTkButton(ventana, text="Modificar Prestamos", command=abrir_modificar)
+    boton_modificar = ctk.CTkButton(most_prestamos_fr, text="Modificar Prestamos", command=abrir_modificar)
     boton_modificar.pack(pady=10)
 
-    ventana.mainloop()
+    most_prestamos_fr.mainloop()

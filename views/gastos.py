@@ -9,8 +9,7 @@ ctk.set_appearance_mode("System")  # "Light", "Dark", "System"
 ctk.set_default_color_theme("blue")  # Puedes cambiar el tema
 
 root = ctk.CTk()
-root.title("Sodería - Gestión")
-root.geometry("600x500")
+
 # Frame principal
 frame = ctk.CTkFrame(root)
 frame.pack(pady=20, padx=20, fill="both", expand=True)
@@ -34,12 +33,12 @@ def agregar_gastos(motivo, monto):
         conexion.close()
 # UI AGREGAR GASTOS
 def ui_agregar_gastos():
-    ventana = ctk.CTkToplevel(root)
-    ventana.title("Agregar Gastos")
-    ventana.geometry("500x400")
+    gastos_fr = ctk.CTkToplevel(root)
+    gastos_fr.title("Agregar Gastos")
+    gastos_fr.after(100, lambda: gastos_fr.state("zoomed"))
     # Campos insumos, pagos_empleado, servicios, otros, monto
-    motivo = ctk.CTkEntry(ventana, placeholder_text="Detalle el motivo del gasto.")
-    monto = ctk.CTkEntry(ventana, placeholder_text="Ingrese el monto del gasto detallado anteriormente.")
+    motivo = ctk.CTkEntry(gastos_fr, placeholder_text="Detalle el motivo del gasto.")
+    monto = ctk.CTkEntry(gastos_fr, placeholder_text="Ingrese el monto del gasto detallado anteriormente.")
 
     motivo.pack(pady=5)
     motivo.configure(width=250, height=50)
@@ -51,11 +50,11 @@ def ui_agregar_gastos():
             monto.get()
         )
         msg = "Gasto agregado correctamente" if resultado else "Error al agregar gasto"
-        ctk.CTkLabel(ventana, text=msg).pack(pady=10)
+        ctk.CTkLabel(gastos_fr, text=msg).pack(pady=10)
 
-    ctk.CTkButton(ventana, text="Guardar", command=guardar).pack(pady=10)
+    ctk.CTkButton(gastos_fr, text="Guardar", command=guardar).pack(pady=10)
 
-    ventana.mainloop()
+    gastos_fr.mainloop()
 
 # MOSTRAR GASTOS
 def obtener_gastos():
@@ -68,11 +67,11 @@ def obtener_gastos():
     return [tuple(fila) for fila in datos]
 # UI PARA MOSTRAR GASTOS / MODIFICAR EN TABLA
 def ui_mostrar_gastos():
-    ventana = ctk.CTk()
-    ventana.title("Lista de GASTOS")
-    ventana.geometry("600x400")
+    most_gastos_fr = ctk.CTk()
+    most_gastos_fr.title("Lista de GASTOS")
+    most_gastos_fr.after(100, lambda: most_gastos_fr.state("zoomed"))
 
-    frame_tabla = ctk.CTkFrame(ventana)
+    frame_tabla = ctk.CTkFrame(most_gastos_fr)
     frame_tabla.pack(fill="both", expand=True, padx=10, pady=10)
 
     columnas = ("ID", "Motivo del Gasto", "Monto", "Fecha del Gasto")
@@ -104,7 +103,7 @@ def ui_mostrar_gastos():
         item = seleccion[0]
         datos = tabla.item(item, "values") 
 
-        top = ctk.CTkToplevel(ventana)
+        top = ctk.CTkToplevel(most_gastos_fr)
         top.title("Modificar Gasto")
 
         labels = ["Motivo del Gasto", "Monto"]
@@ -138,18 +137,18 @@ def ui_mostrar_gastos():
 
         ctk.CTkButton(top, text="Guardar cambios", command=guardar).pack(pady=10)
 
-    boton_modificar = ctk.CTkButton(ventana, text="Modificar Gasto", command=abrir_modificar)
+    boton_modificar = ctk.CTkButton(most_gastos_fr, text="Modificar Gasto", command=abrir_modificar)
     boton_modificar.pack(pady=10)
 
-    ventana.mainloop()
+    most_gastos_fr.mainloop()
 
 # MOSTRAR GASTOS DÍAS/MES
 def ui_mostrar_gastos_por_fecha():
-    ventana = ctk.CTk()
-    ventana.title("Gastos por Fecha")
-    ventana.geometry("700x500")
+    gastos_fecha_fr = ctk.CTk()
+    gastos_fecha_fr.title("Gastos por Fecha")
+    gastos_fecha_fr.after(100, lambda: gastos_fecha_fr.state("zoomed"))
 
-    frame_filtro = ctk.CTkFrame(ventana)
+    frame_filtro = ctk.CTkFrame(gastos_fecha_fr)
     frame_filtro.pack(pady=10)
 
     tk.Label(frame_filtro, text="Seleccione una fecha:").pack(side="left", padx=5)
@@ -157,7 +156,7 @@ def ui_mostrar_gastos_por_fecha():
                         foreground="white", borderwidth=2, date_pattern="yyyy-mm-dd")
     calendario.pack(side="left", padx=5)
 
-    frame_tabla = ctk.CTkFrame(ventana)
+    frame_tabla = ctk.CTkFrame(gastos_fecha_fr)
     frame_tabla.pack(fill="both", expand=True, padx=10, pady=10)
 
     columnas = ("ID", "Motivo del Gasto", "Monto", "Fecha del gasto")
@@ -210,7 +209,7 @@ def ui_mostrar_gastos_por_fecha():
     btn_buscar = ctk.CTkButton(frame_filtro, text="Buscar", command=buscar)
     btn_buscar.pack(side="left", padx=5)
     
-    frame_total = ctk.CTkFrame(ventana)
+    frame_total = ctk.CTkFrame(gastos_fecha_fr)
     frame_total.pack(fill="x", padx=10, pady=10)
 
     def calcular_total():
@@ -234,4 +233,4 @@ def ui_mostrar_gastos_por_fecha():
     lbl_total = ctk.CTkLabel(frame_total, text="Total del día: $0.00", font=("Arial", 16, "bold"))
     lbl_total.pack(side="right", padx=10)
 
-    ventana.mainloop()
+    gastos_fecha_fr.mainloop()

@@ -17,9 +17,7 @@ root = ctk.CTk()
 frame = ctk.CTkFrame(root)
 frame.pack(pady=20, padx=20, fill="both", expand=True)
 
-# ==========================================================
 # CONSULTAS A LA BASE DE DATOS
-# ==========================================================
 
 def obtener_clientes_dict():
     conexion = conectar()
@@ -53,9 +51,7 @@ def nueva_venta(id_cliente, id_envase, cantidad, precio_unitario, subtotal):
         conexion.close()
 
 
-# ==========================================================
 # GENERACIÓN E IMPRESIÓN DE RECIBO
-# ==========================================================
 
 def generar_recibo(carrito):
     """Genera un archivo .txt con el detalle de la venta y devuelve su ruta."""
@@ -109,9 +105,7 @@ def imprimir_recibo(ruta):
         )
 
 
-# ==========================================================
 # UI NUEVA VENTA (CON CARRITO)
-# ==========================================================
 
 def ui_nueva_venta():
     venta_fr = ctk.CTkToplevel(root)
@@ -346,11 +340,11 @@ def mostrar_ventas():
     return [tuple(fila) for fila in datos]
 # UI MOSTRAR TABLA VENTAS
 def ui_mostrar_ventas():
-    ventana = ctk.CTk()
-    ventana.title("Registro de ventas")
-    ventana.geometry("600x400")
+    most_venta_fr = ctk.CTk()
+    most_venta_fr("Registro de ventas")
+    most_venta_fr.after(100, lambda: most_venta_fr.state("zoomed"))
 
-    frame_tabla = ctk.CTkFrame(ventana)
+    frame_tabla = ctk.CTkFrame(most_venta_fr)
     frame_tabla.pack(fill="both", expand=True, padx=10, pady=10)
 
     columnas = ("ID", "Nombre", "Apellido", "Envase", "Cantidad", "Precio por unidad", "Total", "Fecha de venta")
@@ -382,7 +376,7 @@ def ui_mostrar_ventas():
         item = seleccion[0]
         datos = tabla.item(item, "values")
 
-        top = ctk.CTkToplevel(ventana)
+        top = ctk.CTkToplevel(most_venta_fr)
         top.title("Modificar Venta")
 
         columnas_a_modificar = [("Cantidad", 4), ("Total", 6)]
@@ -418,17 +412,17 @@ def ui_mostrar_ventas():
 
         ctk.CTkButton(top, text="Guardar cambios", command=guardar).pack(pady=10)
 
-    boton_modificar = ctk.CTkButton(ventana, text="Modificar Venta", command=abrir_modificar)
+    boton_modificar = ctk.CTkButton(most_venta_fr, text="Modificar Venta", command=abrir_modificar)
     boton_modificar.pack(pady=10)
     
-    ventana.mainloop()
+    most_venta_fr.mainloop()
 # MOSTRAR VENTAS POR FECHA
 def ui_mostrar_ventas_por_fecha():
-    ventana = ctk.CTk()
-    ventana.title("Ventas por Fecha")
-    ventana.geometry("700x500")
+    venta_fecha_fr = ctk.CTk()
+    venta_fecha_fr.title("Ventas por Fecha")
+    venta_fecha_fr.after(100, lambda: venta_fecha_fr.state("zoomed"))
 
-    frame_filtro = ctk.CTkFrame(ventana)
+    frame_filtro = ctk.CTkFrame(venta_fecha_fr)
     frame_filtro.pack(pady=10)
 
     tk.Label(frame_filtro, text="Seleccione una fecha:").pack(side="left", padx=5)
@@ -436,7 +430,7 @@ def ui_mostrar_ventas_por_fecha():
                         foreground="white", borderwidth=2, date_pattern="yyyy-mm-dd")
     calendario.pack(side="left", padx=5)
 
-    frame_tabla = ctk.CTkFrame(ventana)
+    frame_tabla = ctk.CTkFrame(venta_fecha_fr)
     frame_tabla.pack(fill="both", expand=True, padx=10, pady=10)
 
     columnas = ("ID", "Nombre", "Apellido", "Envase", "Cantidad", "Precio por unidad", "Total", "Fecha de venta")
@@ -495,7 +489,7 @@ def ui_mostrar_ventas_por_fecha():
     btn_buscar = ctk.CTkButton(frame_filtro, text="Buscar", command=buscar)
     btn_buscar.pack(side="left", padx=5)
     
-    frame_total = ctk.CTkFrame(ventana)
+    frame_total = ctk.CTkFrame(venta_fecha_fr)
     frame_total.pack(fill="x", padx=10, pady=10)
 
     def calcular_total():
@@ -519,4 +513,4 @@ def ui_mostrar_ventas_por_fecha():
     lbl_total = ctk.CTkLabel(frame_total, text="Total del día: $0.00", font=("Arial", 16, "bold"))
     lbl_total.pack(side="right", padx=10)
 
-    ventana.mainloop()
+    venta_fecha_fr.mainloop()

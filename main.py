@@ -416,4 +416,5 @@ mostrar_frame(frame_clientes)
 
 # EJECUTAR
 
+
 principal.mainloop()

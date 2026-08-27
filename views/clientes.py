@@ -82,7 +82,7 @@ def ui_mostrar_clientes():
     frame_tabla = ctk.CTkFrame(clientes_fr)
     frame_tabla.pack(fill="both", expand=True, padx=10, pady=10)
 
-    columnas = ("ID", "Nombre", "Apellido", "Dirección","Coordenadas", "Celular")
+    columnas = ("ID", "Nombre", "Apellido", "Dirección", "Coordenadas", "Celular")
     tabla = ttk.Treeview(frame_tabla, columns=columnas, show="headings")
 
     for col in columnas:
